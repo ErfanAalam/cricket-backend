@@ -6,7 +6,7 @@ let io;
 export const initializeSocket = (server) => {
   io = new Server(server, {
     cors: {
-      origin: "*",
+      origin: "https://cricket-backend-kohl.vercel.app",
       methods: ["GET", "POST"]
     }
   });
