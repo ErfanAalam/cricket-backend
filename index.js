@@ -17,7 +17,7 @@ const io = initializeSocket(server);
 app.use(express.json());
 app.use(
   cors({
-    origin: "https://cricket-frontend-xin4.onrender.com", // Add your frontend and backend URLs
+    origin: "https://cricket-frontend-ihp9.onrender.com", // Add your frontend and backend URLs
     methods: "GET,POST,PUT,DELETE",
     credentials: true, // Allow cookies and auth headers
   })
