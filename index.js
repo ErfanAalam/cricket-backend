@@ -17,7 +17,7 @@ const io = initializeSocket(server);
 app.use(express.json());
 app.use(
   cors({
-    origin: "https://cricket-frontend-one.vercel.app", // Add your frontend and backend URLs
+    origin: "http://localhost:5173", // Add your frontend and backend URLs
     methods: "GET,POST,PUT,DELETE",
     credentials: true, // Allow cookies and auth headers
   })
