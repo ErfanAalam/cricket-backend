@@ -78,11 +78,11 @@ router.post("/send-otp", async (req, res) => {
 
     // console.log("checkpoint 2")
     // Send OTP via Twilio
-    // const message = await twilioClient.messages.create({
-    //   body: `Your OTP is: ${gen_otp}`,
-    //   from: twilioNumber,
-    //   to: formattedMobile // Use formatted number
-    // });
+    const message = await twilioClient.messages.create({
+      body: `Your OTP is: ${gen_otp}`,
+      from: twilioNumber,
+      to: formattedMobile // Use formatted number
+    });
 
     res.status(200).json({ message: "OTP sent successfully" });
 
