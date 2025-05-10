@@ -3,16 +3,45 @@ import mongoose from "mongoose";
 const UserSchema = new mongoose.Schema({
   name: { type: String },
   mobile: { type: String, unique: true },
-  otp: { type: String },
-  isVerified: { type: Boolean, default: false },
+  // otp: { type: String },
+  // isVerified: { type: Boolean, default: false },
+  isAdmin: { type: Boolean, default: false },
   password: { type: String },
 
   googleId: { type: String, unique: true, sparse: true },
   email: { type: String, unique: true, sparse: true },
 
+  lastSeen: { type: Date, default: Date.now() },
+
   profileImage: { type: String },
-  amount: { type: String, default: 0 },
+  amount: { type: Number, default: 0 },
+
+  referredBy: { type: String},
+  referralCodes: { type: [String], default: [] },
+  totalReferrals: {type: Number},
   
+  transactions: [
+    {
+      TID: {
+        type: String,
+      },
+      OID: {
+        type: String,
+      },
+      amount: {
+        type: Number,
+      },
+      status: {
+        type: String,
+        enum: ["PENDING", "SUCCESS", "FAILED"],
+        default: "PENDING",
+      },
+      time: {
+        type: Date,
+        default: Date(),
+      },
+    },
+  ],
   // User Portfolio Schema
   portfolio: [
     {
@@ -28,7 +57,7 @@ const UserSchema = new mongoose.Schema({
           price: { type: Number }, // Price per stock at transaction time
           timestamp: { type: Date, default: Date.now }, // When the transaction occurred
           autoSold: { type: Boolean, default: false }, // Whether it was auto-sold
-          reason: { type: String } // Reason for auto-selling (out, innings complete, match complete)
+          reason: { type: String }, // Reason for auto-selling (out, innings complete, match complete)
         },
       ],
       currentHoldings: { type: Number }, // Current number of stocks held
@@ -49,13 +78,21 @@ const UserSchema = new mongoose.Schema({
           price: { type: Number },
           timestamp: { type: Date, default: Date.now },
           autoSold: { type: Boolean, default: false },
-          reason: { type: String }
+          reason: { type: String },
         },
       ],
       currentHoldings: { type: Number },
     },
-  ]
+  ],
 });
 
+const OtpRequestSchema = new mongoose.Schema({
+  phone: { type: String, unique: true },
+  otp: { type: String },
+});
+
+
 const User = mongoose.model("User", UserSchema);
-export default User;
+const OtpRequest = mongoose.model("OTPrequest", OtpRequestSchema);
+
+export { User, OtpRequest};

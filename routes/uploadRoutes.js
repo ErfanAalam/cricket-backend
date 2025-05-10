@@ -1,7 +1,7 @@
 import express from "express";
 import multer from "multer";
 import cloudinary from "../uploadImage/cloudinary.js";// Cloudinary config
-import User from "../models/User.js"; // Import User model
+import { User } from "../models/User.js"; // Import User model
 import authMiddleware from "../middlewares/authMiddleware.js"; // Protect route
 
 const router = express.Router();
@@ -22,7 +22,7 @@ router.post("/upload-profile", authMiddleware, upload.single("image"), async (re
       folder: "user_profiles",
     });
 
-    
+
 
     const userId = req.user.userId; // Get User ID from Token
 

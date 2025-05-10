@@ -45,14 +45,16 @@ import matchRoutes from "./routes/matchRoutes.js";
 import matchScores from "./routes/matchScores.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
 import portfolioRoute from "./routes/portfolioRoute.js";
+import paymentRoute from "./routes/paymentRoute.js"
 import { startTrackingUserPortfolioMatches } from "./MatchPortfolioTracker/MatchPortfolioTracker.js";
 
 // Define Routes
 app.use("/auth", authRoutes);
 app.use("/matches", matchRoutes);
 app.use("/match-scores", matchScores);
-app.use("/api", uploadRoutes);
+app.use("/upload", uploadRoutes);
 app.use("/portfolio", portfolioRoute);
+app.use("/payment", paymentRoute);
 
 // Root Route
 app.get("/", (req, res) => {

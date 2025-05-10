@@ -1,7 +1,7 @@
 import express from "express";
 import { MatchScore } from "../models/MatchScore.js";
 import { MatchSchedule } from "../models/MatchSchedule.js";
-import User from "../models/User.js";
+import { User } from "../models/User.js";
 import axios from "axios";
 import dotenv from "dotenv";
 // import { io } from "../index.js";
@@ -26,12 +26,12 @@ export const fetchMatchScore = async (matchId) => {
     );
 
     const matchData = response.data;
-    
+
     if (!matchData) return null;
 
     // Extract scorecard data for both teams
     const scorecard = matchData.scoreCard || [];
-    
+
 
     // Process data for both innings
     const processedInnings = scorecard.map((innings) => ({
@@ -176,11 +176,11 @@ export const fetchMatchScore = async (matchId) => {
       responseLastUpdated: new Date(), // Ensure this is a Date object
       innings: processedInnings,
     };
-    
+
 
     // Store in database - use findOneAndUpdate with new:true to return the updated document
     const storedMatchScore = await MatchScore.findOneAndUpdate(
-      { 
+      {
         matchId,
         $or: [
           { responseLastUpdated: { $exists: false } },
@@ -190,9 +190,9 @@ export const fetchMatchScore = async (matchId) => {
       newMatchScore,
       { upsert: true, new: true }
     );
-    
 
-    
+
+
 
     io.to(matchId).emit("scoreUpdate", storedMatchScore);
     console.log(`Broadcasting update for match ${matchId}`);
@@ -223,50 +223,59 @@ router.get("/all-scores", async (req, res) => {
 });
 
 const activeMatches = new Map(); // Map<matchId, {interval, subscribers}>
+let connectedUsers = new Set(); // Track connected users by socket ID
 
 export function setupSocketConnections() {
   try {
     const io = getIO();
 
+    // Add route to get connected users count
+    // const router = express.Router();
+    router.get('/connected-users', (req, res) => {
+      res.json({ count: connectedUsers.size });
+    });
+
     io.on("connection", (socket) => {
       console.log("Client connected:", socket.id);
-      
+      connectedUsers.add(socket.id);
+      console.log(`Total connected users: ${connectedUsers.size}`);
+
       // Keep track of which matches this socket is subscribed to
       socket.subscribedMatches = new Set(); // Attach to socket object directly
 
       socket.on("subscribeMatch", async (match) => {
         const matchId = match.matchId
         console.log(`Client ${socket.id} subscribed to match ${matchId}`);
-      
+
         socket.join(matchId);
         socket.subscribedMatches.add(matchId);
 
         await fetchMatchScore(matchId);
-      
+
         const matchData = await MatchScore.findOne({ matchId });
-      
+
         if (!match) {
           console.log(`No match found with ID: ${matchId}`);
           return;
         }
-      
+
         // Always send initial data (could be pre-match info too)
         socket.emit("scoreUpdate", matchData);
-      
+
         const now = new Date();
         const matchStart = new Date(match.startDate);
-      
+
         // If match is complete, don't do anything further
         if (match.isMatchComplete) {
           console.log(`Match ${matchId} is complete. Not starting interval.`);
           return;
         }
-      
+
         // If match hasn't started yet, schedule it
         if (matchStart > now) {
           const msUntilStart = matchStart.getTime() - now.getTime();
-          console.log(`Match ${matchId} will start in ${msUntilStart / (1000*60)}m`);
-      
+          console.log(`Match ${matchId} will start in ${msUntilStart / (1000 * 60)}m`);
+
           setTimeout(() => {
             // Double-check match hasn't completed before starting interval
             MatchScore.findOne({ matchId }).then((latestMatch) => {
@@ -281,10 +290,10 @@ export function setupSocketConnections() {
               }
             });
           }, msUntilStart);
-      
+
           return;
         }
-      
+
         // Match is already live – start fetching now
         if (!activeMatches.has(matchId)) {
           const interval = setInterval(() => {
@@ -299,8 +308,8 @@ export function setupSocketConnections() {
           console.log(`Match ${matchId} now has ${matchData.subscribers} subscribers`);
         }
       });
-        
-      
+
+
       // Handle unsubscribe (if you have this functionality)
       socket.on("unsubscribeMatch", (matchId) => {
         handleUnsubscribe(socket, matchId);
@@ -309,7 +318,9 @@ export function setupSocketConnections() {
       // Cleanup on disconnect
       socket.on("disconnect", () => {
         console.log(`Client ${socket.id} disconnected`);
-        
+        connectedUsers.delete(socket.id);
+        console.log(`Total connected users: ${connectedUsers.size}`);
+
         // Clean up all subscriptions for this socket
         if (socket.subscribedMatches) {
           for (const matchId of socket.subscribedMatches) {
@@ -318,22 +329,22 @@ export function setupSocketConnections() {
         }
       });
     });
-    
+
     // Helper function to handle unsubscribing
     function handleUnsubscribe(socket, matchId) {
       // Remove from room
       socket.leave(matchId);
-      
+
       // Remove from tracking set
       if (socket.subscribedMatches) {
         socket.subscribedMatches.delete(matchId);
       }
-      
+
       // Decrement subscribers and possibly clean up interval
       if (activeMatches.has(matchId)) {
         const matchData = activeMatches.get(matchId);
         matchData.subscribers -= 1;
-        
+
         // If no more subscribers, clear the interval
         if (matchData.subscribers <= 0) {
           console.log(`Clearing interval for match ${matchId} - no more subscribers`);

@@ -1,5 +1,5 @@
 import { MatchScore } from "../models/MatchScore.js";
-import User from "../models/User.js";
+import { User } from "../models/User.js";
 import { fetchMatchScore } from "../routes/matchScores.js";
 
 const activePortfolioMatches = new Map(); // matchId => interval
@@ -8,7 +8,7 @@ export async function startTrackingUserPortfolioMatches() {
   try {
     // Create a map to track matches that still have active positions
     const matchesWithActiveHoldings = new Map(); // matchId => hasActiveHoldings
-    
+
     // Find users who have either a player portfolio or team portfolio
     const users = await User.find({
       $or: [
@@ -16,9 +16,9 @@ export async function startTrackingUserPortfolioMatches() {
         { "teamPortfolio.0": { $exists: true } }
       ]
     });
-    
+
     console.log(`Found ${users.length} users with portfolios`);
-    
+
     // Process each user's portfolios
     users.forEach((user) => {
       // Process player portfolio
@@ -31,7 +31,7 @@ export async function startTrackingUserPortfolioMatches() {
           }
         });
       }
-      
+
       // Process team portfolio
       if (user.teamPortfolio && user.teamPortfolio.length > 0) {
         user.teamPortfolio.forEach((item) => {
@@ -43,7 +43,7 @@ export async function startTrackingUserPortfolioMatches() {
         });
       }
     });
-    
+
     // Get array of match IDs that have active holdings
     const matchIds = [...matchesWithActiveHoldings.keys()];
     console.log("Tracking matchIds from portfolios with active holdings:", matchIds);
@@ -85,7 +85,7 @@ export async function startTrackingUserPortfolioMatches() {
 
       activePortfolioMatches.set(matchId, interval);
     }
-    
+
     console.log(`Now tracking ${activePortfolioMatches.size} active matches`);
   } catch (err) {
     console.error("Error starting portfolio match tracking:", err.message);
@@ -95,12 +95,12 @@ export async function startTrackingUserPortfolioMatches() {
 // Function to stop tracking all matches
 export function stopAllPortfolioTracking() {
   const count = activePortfolioMatches.size;
-  
+
   activePortfolioMatches.forEach((interval, matchId) => {
     clearInterval(interval);
     console.log(`Stopped tracking match ${matchId}`);
   });
-  
+
   activePortfolioMatches.clear();
   console.log(`All portfolio match tracking stopped (${count} matches)`);
 }
@@ -109,13 +109,13 @@ export function stopAllPortfolioTracking() {
 export async function checkAndCleanupCompletedMatches() {
   const matchIds = [...activePortfolioMatches.keys()];
   console.log(`Checking ${matchIds.length} matches for completion status`);
-  
+
   let cleanedCount = 0;
-  
+
   for (const matchId of matchIds) {
     try {
       const match = await MatchScore.findOne({ matchId });
-      
+
       if (match?.isMatchComplete) {
         clearInterval(activePortfolioMatches.get(matchId));
         activePortfolioMatches.delete(matchId);
@@ -126,7 +126,7 @@ export async function checkAndCleanupCompletedMatches() {
       console.error(`Error checking match ${matchId}:`, err.message);
     }
   }
-  
+
   console.log(`Cleanup complete. Removed ${cleanedCount} completed matches.`);
 }
 
@@ -135,25 +135,25 @@ export async function checkActiveHoldingsForMatch(matchId) {
   try {
     const usersWithActiveHoldings = await User.find({
       $or: [
-        { 
-          "portfolio": { 
-            $elemMatch: { 
-              "matchId": matchId, 
-              "currentHoldings": { $gt: 0 } 
-            } 
-          } 
+        {
+          "portfolio": {
+            $elemMatch: {
+              "matchId": matchId,
+              "currentHoldings": { $gt: 0 }
+            }
+          }
         },
-        { 
-          "teamPortfolio": { 
-            $elemMatch: { 
-              "matchId": matchId, 
-              "currentHoldings": { $gt: 0 } 
-            } 
-          } 
+        {
+          "teamPortfolio": {
+            $elemMatch: {
+              "matchId": matchId,
+              "currentHoldings": { $gt: 0 }
+            }
+          }
         }
       ]
     });
-    
+
     return usersWithActiveHoldings.length > 0;
   } catch (err) {
     console.error(`Error checking holdings for match ${matchId}:`, err.message);
@@ -164,10 +164,10 @@ export async function checkActiveHoldingsForMatch(matchId) {
 // Function to periodically refresh which matches need tracking
 export async function refreshPortfolioTracking() {
   console.log("Starting portfolio tracking refresh");
-  
+
   // Stop all current tracking
   stopAllPortfolioTracking();
-  
+
   // Restart with fresh data
   await startTrackingUserPortfolioMatches();
   console.log("Portfolio tracking refresh completed");
@@ -177,12 +177,12 @@ export async function refreshPortfolioTracking() {
 export async function cleanupInactiveMatches() {
   const matchIds = [...activePortfolioMatches.keys()];
   console.log(`Checking ${matchIds.length} tracked matches for inactive status`);
-  
+
   let removedCount = 0;
-  
+
   for (const matchId of matchIds) {
     const hasActiveHoldings = await checkActiveHoldingsForMatch(matchId);
-    
+
     if (!hasActiveHoldings) {
       clearInterval(activePortfolioMatches.get(matchId));
       activePortfolioMatches.delete(matchId);
@@ -190,6 +190,6 @@ export async function cleanupInactiveMatches() {
       console.log(`Stopped tracking match ${matchId} (no active holdings)`);
     }
   }
-  
+
   console.log(`Inactive cleanup complete. Removed ${removedCount} matches with no active holdings.`);
 }
